@@ -53,6 +53,17 @@ app.get('/', (req, res) => {
   });
 });
 
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+  const healthcheck = {
+    uptime: process.uptime(),
+    status: 'OK',
+    timestamp: Date.now(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  };
+  res.status(200).json(healthcheck);
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/questions', questionRoutes);
