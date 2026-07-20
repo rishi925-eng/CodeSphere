@@ -163,7 +163,7 @@ export class DockerRunner {
             }
           );
           execStream.on('end', () => resolve());
-          execStream.on('error', (err) => reject(err));
+          execStream.on('error', (err: any) => reject(err));
         });
 
         const inspect = await exec.inspect();

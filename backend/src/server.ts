@@ -55,7 +55,7 @@ setupSocket(io);
 initializeQueue();
 
 // API Routes
-app.get('/', (req, res) => {
+app.get('/', (req: any, res: any) => {
   res.json({ 
     message: 'CodeSphere Backend API',
     version: '1.0.0',
@@ -69,7 +69,7 @@ app.get('/', (req, res) => {
 });
 
 // Health check endpoint for Render
-app.get('/health', (req, res) => {
+app.get('/health', (req: any, res: any) => {
   const healthcheck = {
     uptime: process.uptime(),
     status: 'OK',
@@ -85,7 +85,7 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/code', codeRoutes);
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: any, res: any, next: any) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
     success: false,
