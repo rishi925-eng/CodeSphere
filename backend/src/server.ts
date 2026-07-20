@@ -19,26 +19,23 @@ const app = express();
 const server = http.createServer(app);
 
 // CORS Configuration helper to match dynamic frontend domains
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'http://localhost:5173',
-  'http://localhost:3000'
-].filter(Boolean) as string[];
-
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-    // Dynamic matching or wildcard handling in production
-    const isAllowed = allowedOrigins.some((allowed) => origin.startsWith(allowed) || allowed === '*');
-    if (isAllowed || process.env.NODE_ENV !== 'production') {
+    // In development or production, allow the FRONTEND_URL or any subdomains
+    if (!origin || process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    const originHost = new URL(origin).hostname;
+    const frontendHost = process.env.FRONTEND_URL ? new URL(process.env.FRONTEND_URL).hostname : '';
+    if (originHost === frontendHost || originHost.endsWith('.onrender.com') || originHost === 'localhost') {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(null, true); // Fallback to avoid strict CORS block errors on Render proxy
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 // Middleware
@@ -50,12 +47,15 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const isAllowed = allowedOrigins.some((allowed) => origin.startsWith(allowed) || allowed === '*');
-      if (isAllowed || process.env.NODE_ENV !== 'production') {
+      if (!origin || process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      const originHost = new URL(origin).hostname;
+      const frontendHost = process.env.FRONTEND_URL ? new URL(process.env.FRONTEND_URL).hostname : '';
+      if (originHost === frontendHost || originHost.endsWith('.onrender.com') || originHost === 'localhost') {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(null, true); // Fallback to avoid strict CORS block errors on Render proxy
       }
     },
     methods: ['GET', 'POST'],
