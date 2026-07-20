@@ -21,17 +21,8 @@ const server = http.createServer(app);
 // CORS Configuration helper to match dynamic frontend domains
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // In development or production, allow the FRONTEND_URL or any subdomains
-    if (!origin || process.env.NODE_ENV !== 'production') {
-      return callback(null, true);
-    }
-    const originHost = new URL(origin).hostname;
-    const frontendHost = process.env.FRONTEND_URL ? new URL(process.env.FRONTEND_URL).hostname : '';
-    if (originHost === frontendHost || originHost.endsWith('.onrender.com') || originHost === 'localhost') {
-      callback(null, true);
-    } else {
-      callback(null, true); // Fallback to avoid strict CORS block errors on Render proxy
-    }
+    // Mirror the origin back dynamically to guarantee CORS approval
+    callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -47,16 +38,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || process.env.NODE_ENV !== 'production') {
-        return callback(null, true);
-      }
-      const originHost = new URL(origin).hostname;
-      const frontendHost = process.env.FRONTEND_URL ? new URL(process.env.FRONTEND_URL).hostname : '';
-      if (originHost === frontendHost || originHost.endsWith('.onrender.com') || originHost === 'localhost') {
-        callback(null, true);
-      } else {
-        callback(null, true); // Fallback to avoid strict CORS block errors on Render proxy
-      }
+      // Mirror the origin back dynamically to guarantee Socket.IO CORS approval
+      callback(null, true);
     },
     methods: ['GET', 'POST'],
     credentials: true
