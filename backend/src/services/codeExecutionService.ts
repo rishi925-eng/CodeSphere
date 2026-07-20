@@ -105,7 +105,7 @@ export class CodeExecutionService {
     } else if (request.language === 'go') {
       command = `go run "${filePath}"`;
     } else if (request.language === 'cpp') {
-      const exePath = path.join(tempDir, `${baseNameWithoutExt}.exe`);
+      const exePath = path.join(tempDir, `${baseNameWithoutExt}_exec`);
       command = `g++ "${filePath}" -o "${exePath}" && "${exePath}"`;
       cleanupFiles.push(exePath);
     } else if (request.language === 'java') {
