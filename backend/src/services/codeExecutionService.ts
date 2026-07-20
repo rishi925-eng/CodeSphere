@@ -165,6 +165,52 @@ export class CodeExecutionService {
     try {
       const language = languageMap[request.language] || request.language;
 
+      // Check if Judge0 is configured in the backend environment variables
+      const judge0Key = process.env.JUDGE0_API_KEY;
+      const judge0Url = process.env.JUDGE0_API_URL || 'https://judge0-ce.p.rapidapi.com';
+
+      if (judge0Key) {
+        console.log(`Routing execution to Judge0 compiler for: ${request.language}`);
+        
+        // Map language strings to Judge0 language IDs
+        const judge0LanguageIds: { [key: string]: number } = {
+          javascript: 63,
+          typescript: 74,
+          python: 71,
+          cpp: 54, // C++ (GCC 9.2.0)
+          java: 62, // Java (OpenJDK 13.0.1)
+          go: 60    // Go (1.13.5)
+        };
+
+        const languageId = judge0LanguageIds[request.language.toLowerCase()] || 63;
+
+        const response = await axios.post(`${judge0Url}/submissions?base64_encoded=false&wait=true`, {
+          language_id: languageId,
+          source_code: request.code,
+          stdin: request.stdin || ''
+        }, {
+          headers: {
+            'X-RapidAPI-Key': judge0Key,
+            'X-RapidAPI-Host': new URL(judge0Url).hostname,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const result = response.data;
+        const stdout = result.stdout || '';
+        const stderr = result.stderr || result.compile_output || '';
+        const success = result.status?.id === 3; // 3 means "Accepted"
+
+        return {
+          output: stdout,
+          error: success ? null : stderr,
+          executionTime: result.time ? parseFloat(result.time) * 1000 : 0,
+          memory: result.memory || 0,
+          success
+        };
+      }
+
+      // Default Piston API POST execution
       const response = await axios.post(`${PISTON_API_URL}/execute`, {
         language,
         version: '*', // Use latest version
@@ -184,7 +230,7 @@ export class CodeExecutionService {
 
       const result = response.data;
 
-      // Handle Piston whitelist/restriction messages by throwing an error to trigger the local fallback
+      // Handle Piston whitelist/restriction messages by throwing an error to trigger local fallback
       if (result.message && (result.message.includes('whitelist') || result.message.includes('permission') || result.message.includes('restrict'))) {
         throw new Error(`Piston API restriction: ${result.message}`);
       }
@@ -197,13 +243,13 @@ export class CodeExecutionService {
         success: result.run ? result.run.code === 0 : true
       };
     } catch (error: any) {
-      console.warn('Piston API request failed. Falling back to local runner...', error.message);
+      console.warn('Primary execution API failed. Falling back to local runner...', error.message);
       try {
         return await this.executeCodeLocal(request);
       } catch (fallbackError: any) {
         return {
           output: '',
-          error: `Execution failed (Piston API down and local fallback failed: ${fallbackError.message})`,
+          error: `Execution failed (Remote APIs down and local fallback failed: ${fallbackError.message})`,
           executionTime: 0,
           memory: 0,
           success: false
