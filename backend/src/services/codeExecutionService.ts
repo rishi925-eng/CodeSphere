@@ -183,31 +183,36 @@ export class CodeExecutionService {
         };
 
         const languageId = judge0LanguageIds[request.language.toLowerCase()] || 63;
+        const apiHost = judge0Url.includes('rapidapi') ? 'judge0-ce.p.rapidapi.com' : new URL(judge0Url).hostname;
 
-        const response = await axios.post(`${judge0Url}/submissions?base64_encoded=false&wait=true`, {
-          language_id: languageId,
-          source_code: request.code,
-          stdin: request.stdin || ''
-        }, {
-          headers: {
-            'X-RapidAPI-Key': judge0Key,
-            'X-RapidAPI-Host': new URL(judge0Url).hostname,
-            'Content-Type': 'application/json'
-          }
-        });
+        try {
+          const response = await axios.post(`${judge0Url}/submissions?base64_encoded=false&wait=true`, {
+            language_id: languageId,
+            source_code: request.code,
+            stdin: request.stdin || ''
+          }, {
+            headers: {
+              'X-RapidAPI-Key': judge0Key,
+              'X-RapidAPI-Host': apiHost,
+              'Content-Type': 'application/json'
+            }
+          });
 
-        const result = response.data;
-        const stdout = result.stdout || '';
-        const stderr = result.stderr || result.compile_output || '';
-        const success = result.status?.id === 3; // 3 means "Accepted"
+          const result = response.data;
+          const stdout = result.stdout || '';
+          const stderr = result.stderr || result.compile_output || '';
+          const success = result.status?.id === 3; // 3 means "Accepted"
 
-        return {
-          output: stdout,
-          error: success ? null : stderr,
-          executionTime: result.time ? parseFloat(result.time) * 1000 : 0,
-          memory: result.memory || 0,
-          success
-        };
+          return {
+            output: stdout,
+            error: success ? null : stderr,
+            executionTime: result.time ? parseFloat(result.time) * 1000 : 0,
+            memory: result.memory || 0,
+            success
+          };
+        } catch (apiError: any) {
+          console.error('Judge0 submission failed, trying default flow:', apiError.response?.data || apiError.message);
+        }
       }
 
       // Default Piston API POST execution
