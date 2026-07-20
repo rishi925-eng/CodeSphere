@@ -37,7 +37,11 @@ const io = new Server(server, {
   pingInterval: 25000
 });
 
+import { initializeQueue } from './queue/executionQueue.js';
+
+// Setup Socket and Queue
 setupSocket(io);
+initializeQueue();
 
 // API Routes
 app.get('/', (req, res) => {

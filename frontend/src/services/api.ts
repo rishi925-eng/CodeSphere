@@ -13,12 +13,24 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && token !== 'null' && token !== 'undefined') {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// Catch responses and handle 401 token cleanup
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Clear malformed/expired token automatically
+      localStorage.removeItem('token');
+    }
+    return Promise.reject(error);
+  }
 );
 
 // Auth API

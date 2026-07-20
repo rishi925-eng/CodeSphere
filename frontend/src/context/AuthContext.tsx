@@ -39,12 +39,21 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const getSafeToken = (): string | null => {
+    const t = localStorage.getItem('token');
+    if (!t || t === 'null' || t === 'undefined') {
+      return null;
+    }
+    return t;
+  };
+
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(getSafeToken());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
+    const activeToken = getSafeToken();
+    if (activeToken) {
       loadUser();
     } else {
       setLoading(false);
@@ -55,8 +64,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authAPI.getMe();
       setUser(response.data.data.user);
-    } catch (error) {
-      console.error('Failed to load user:', error);
+    } catch (error: any) {
+      // 401 is expected when the guest token is missing or expired, do not log as an error
+      if (error?.response?.status !== 401) {
+        console.error('Failed to load user:', error);
+      }
       logout();
     } finally {
       setLoading(false);
